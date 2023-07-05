@@ -34,6 +34,34 @@ static void error_handler(uint32_t error)
 	}
 }
 
+void am_gpio_isr(void)
+{
+	uint64_t ui64Status;
+	am_hal_gpio_interrupt_status_get(false, &ui64Status);
+	am_hal_gpio_interrupt_clear(ui64Status);
+	am_hal_gpio_interrupt_service(ui64Status);
+}
+
+void gpio_handler(void)
+{
+    uint32_t count;
+    uint32_t val;
+
+    //
+    // Debounce for 20 ms.
+    // We're triggered for rising edge - so we expect a consistent HIGH here
+    //
+    for (count = 0; count < 10; count++)
+    {
+        am_hal_gpio_state_read(23,  AM_HAL_GPIO_INPUT_READ, &val);
+        if (!val)
+        {
+            return; // State not high...must be result of debounce
+        }
+        am_util_delay_ms(2);
+    }
+}
+
 static struct uart uart;
 static struct gpio alarm;
 
@@ -47,22 +75,30 @@ int main(void)
 	am_hal_sysctrl_fpu_enable();
 	am_hal_sysctrl_fpu_stacking_enable(true);
 
+	am_hal_gpio_interrupt_register(23, gpio_handler);
+
+	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
+
+	am_hal_gpio_interrupt_clear(((uint64_t) 0x1) << 23);
+	am_hal_gpio_interrupt_enable(((uint64_t) 0x1) << 23);
+	NVIC_EnableIRQ(GPIO_IRQn);
+
 	// Init UART, registers with SDK printf
 	uart_init(&uart, UART_INST0);
 
-	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
+	am_hal_interrupt_master_enable();
 
 	int counter = 0;
 	// Wait here for the ISR to grab a buffer of samples.
 	while (1)
 	{
-		// Print the battery voltage and temperature for each interrupt
-		//
 		uint32_t data = 0;
 		if (gpio_read(&alarm) == false){
 			am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
 		}
-		am_util_delay_ms(1);
-		counter += 1;
+		am_util_delay_ms(10);
+		counter += 10;
+		
+		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
 	}
 }
