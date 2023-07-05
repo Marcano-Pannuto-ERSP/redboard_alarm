@@ -52,6 +52,7 @@ int main(void)
 
 	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
 
+	int counter = 0;
 	// Wait here for the ISR to grab a buffer of samples.
 	while (1)
 	{
@@ -59,9 +60,9 @@ int main(void)
 		//
 		uint32_t data = 0;
 		if (gpio_read(&alarm) == false){
-			am_util_stdio_terminal_clear();
-			am_util_stdio_printf("alarm went off\r\n\r\n");
+			am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
 		}
-		am_util_delay_ms(200);
+		am_util_delay_ms(1);
+		counter += 1;
 	}
 }
