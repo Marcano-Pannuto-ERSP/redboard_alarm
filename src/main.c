@@ -34,14 +34,6 @@ static void error_handler(uint32_t error)
 	}
 }
 
-void am_gpio_isr(void)
-{
-	uint64_t ui64Status;
-	am_hal_gpio_interrupt_status_get(false, &ui64Status);
-	am_hal_gpio_interrupt_clear(ui64Status);
-	am_hal_gpio_interrupt_service(ui64Status);
-}
-
 void gpio_handler(void)
 {
     uint32_t count;
@@ -77,11 +69,8 @@ int main(void)
 
 	am_hal_gpio_interrupt_register(23, gpio_handler);
 
-	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
-
 	am_hal_gpio_interrupt_clear(((uint64_t) 0x1) << 23);
-	am_hal_gpio_interrupt_enable(((uint64_t) 0x1) << 23);
-	NVIC_EnableIRQ(GPIO_IRQn);
+	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
 
 	// Init UART, registers with SDK printf
 	uart_init(&uart, UART_INST0);
