@@ -88,10 +88,12 @@ int main(void)
 	int counter = 0;
 	while (1)
 	{
+		// tells us when the alarm stops
 		am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
 		am_util_delay_ms(10);
 		counter += 10;
 		
+		// code for gpio_handler
 		int currentCount = count;
 		while (currentCount == count) {
 			am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
