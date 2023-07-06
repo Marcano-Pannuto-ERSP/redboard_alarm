@@ -32,6 +32,9 @@
 		error_handler(x);\
 	}
 
+volatile uint32_t count;
+volatile uint32_t val;
+
 static void error_handler(uint32_t error)
 {
 	(void)error;
@@ -47,22 +50,12 @@ static void error_handler(uint32_t error)
 /* added gpio_handler which differs from the original file */
 void gpio_handler(void)
 {
-    uint32_t count;
-    uint32_t val;
-
     //
     // Debounce for 20 ms.
     // We're triggered for rising edge - so we expect a consistent HIGH here
     //
-    for (count = 0; count < 10; count++)
-    {
-        am_hal_gpio_state_read(23,  AM_HAL_GPIO_INPUT_READ, &val);
-        if (!val)
-        {
-            return; // State not high...must be result of debounce
-        }
-        am_util_delay_ms(2);
-    }
+    am_hal_gpio_state_read(23,  AM_HAL_GPIO_INPUT_READ, &val);
+    count++;
 }
 
 /* 
@@ -96,17 +89,21 @@ int main(void)
 	while (1)
 	{
 		uint32_t data = 0;
-		if (gpio_read(&alarm) == false){
+		//if (gpio_read(&alarm) == false){
 			am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
-		}
+		//}
 		am_util_delay_ms(10);
 		counter += 10;
 
 		// debugging print
 		uint64_t ui64Status;
 		am_hal_gpio_interrupt_status_get(false, &ui64Status);
-		am_util_stdio_printf("status: %08llX\r\n\r\n", ui64Status);	// magic print statement
+		// am_util_stdio_printf("status: %08llX\r\n\r\n", ui64Status);	// magic print statement
 		// am_util_stdio_printf("status: %"PRIx64"\r\n\r\n", ui64Status);
-		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+		
+		int currentCount = count;
+		while (currentCount == count) {
+			am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+		}
 	}
 }

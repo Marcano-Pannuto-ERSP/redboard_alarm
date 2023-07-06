@@ -1,8 +1,9 @@
-# Example application using a LoRa module, using `asimple`
+# Application to catch GPIO interrupts, using `asimple`
 
-This is an example application using the asimple and forked AmbiqSuiteSDK
-projects to sense the voltage of an attached LMT84 and send it as JSON over
-LoRa PHY.
+This is an application using the asimple and forked AmbiqSuiteSDK
+projects to print a message when a GPIO interrupt occurs. This is intended 
+to be used with an Ambiq AM1815 RTC configured to output alarms to its 
+FOUT/nIRQ pin. That pin should be connected to the Redboard's pin 23.
 
 ## Dependencies
  - https://github.com/gemarcano/AmbiqSuiteSDK
