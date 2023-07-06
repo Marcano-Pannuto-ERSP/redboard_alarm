@@ -50,10 +50,6 @@ static void error_handler(uint32_t error)
 /* added gpio_handler which differs from the original file */
 void gpio_handler(void)
 {
-    //
-    // Debounce for 20 ms.
-    // We're triggered for rising edge - so we expect a consistent HIGH here
-    //
     am_hal_gpio_state_read(23,  AM_HAL_GPIO_INPUT_READ, &val);
     count++;
 }
