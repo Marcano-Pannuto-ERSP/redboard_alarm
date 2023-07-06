@@ -91,8 +91,8 @@ int main(void)
 
 		uint64_t ui64Status;
 		am_hal_gpio_interrupt_status_get(false, &ui64Status);
-		am_util_stdio_printf("status: %08llX\r\n\r\n", ui64Status);
-		am_util_stdio_printf("status: %"PRIx64"\r\n\r\n", ui64Status);
+		am_util_stdio_printf("status: %08llX\r\n\r\n", ui64Status);	// magic print statement
+		// am_util_stdio_printf("status: %"PRIx64"\r\n\r\n", ui64Status);
 		am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
 	}
 }
