@@ -1,5 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright: Gabriel Marcano, 2023
+// SPDX-FileCopyrightText 2023 Kristin Ebuengan
+// SPDX-FileCopyrightText 2023 Melody Gill
+// SPDX-FileCopyrightText 2023 Gabriel Marcano
+
+/* 
+* This is an edited file of main.c from https://github.com/gemarcano/redboard_lora_example
+* which this repo was forked from
+*
+* Uses GPIO interrupts from the redboard to alert when an alarm set off from the RTC
+*/
 
 #include "am_mcu_apollo.h"
 #include "am_bsp.h"
@@ -35,6 +44,7 @@ static void error_handler(uint32_t error)
 	}
 }
 
+/* added gpio_handler which differs from the original file */
 void gpio_handler(void)
 {
     uint32_t count;
@@ -55,6 +65,10 @@ void gpio_handler(void)
     }
 }
 
+/* 
+* removed anything using LoRa from original file and used the file as a
+* template for GPIO interrupts 
+*/
 static struct uart uart;
 static struct gpio alarm;
 
@@ -68,18 +82,17 @@ int main(void)
 	am_hal_sysctrl_fpu_enable();
 	am_hal_sysctrl_fpu_stacking_enable(true);
 
+	// Enabling the GPIO interrupt (added from original file)
 	am_hal_gpio_interrupt_register(23, gpio_handler);
-
 	am_hal_gpio_interrupt_clear(((uint64_t) 0x1) << 23);
 	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
+	am_hal_interrupt_master_enable();
 
 	// Init UART, registers with SDK printf
 	uart_init(&uart, UART_INST0);
 
-	am_hal_interrupt_master_enable();
-
+	// Wait till an interrupt happens (changed from original file)
 	int counter = 0;
-	// Wait here for the ISR to grab a buffer of samples.
 	while (1)
 	{
 		uint32_t data = 0;
@@ -89,6 +102,7 @@ int main(void)
 		am_util_delay_ms(10);
 		counter += 10;
 
+		// debugging print
 		uint64_t ui64Status;
 		am_hal_gpio_interrupt_status_get(false, &ui64Status);
 		am_util_stdio_printf("status: %08llX\r\n\r\n", ui64Status);	// magic print statement
