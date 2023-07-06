@@ -88,18 +88,9 @@ int main(void)
 	int counter = 0;
 	while (1)
 	{
-		uint32_t data = 0;
-		//if (gpio_read(&alarm) == false){
-			am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
-		//}
+		am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
 		am_util_delay_ms(10);
 		counter += 10;
-
-		// debugging print
-		uint64_t ui64Status;
-		am_hal_gpio_interrupt_status_get(false, &ui64Status);
-		// am_util_stdio_printf("status: %08llX\r\n\r\n", ui64Status);	// magic print statement
-		// am_util_stdio_printf("status: %"PRIx64"\r\n\r\n", ui64Status);
 		
 		int currentCount = count;
 		while (currentCount == count) {
