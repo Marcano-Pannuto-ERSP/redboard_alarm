@@ -58,13 +58,13 @@ void am1815_write_alarm(struct am1815 *rtc, struct timeval *atime)
     gmtime_r(&(atime->tv_sec), &date);
     int hundredths = atime->tv_usec / 10000;
 
-    am1815_write_register(rtc, 0x8, hundredths);
-    am1815_write_register(rtc, 0x9, date.tm_sec);
-    am1815_write_register(rtc, 0xA, date.tm_min);
-    am1815_write_register(rtc, 0xB, date.tm_hour);
-    am1815_write_register(rtc, 0xC, date.tm_mday);
-    am1815_write_register(rtc, 0xD, date.tm_mon);
-    am1815_write_register(rtc, 0xE, date.tm_wday);
+    am1815_write_register(rtc, 0x8, (uint8_t)hundredths);
+    am1815_write_register(rtc, 0x9, (uint8_t)date.tm_sec);
+    am1815_write_register(rtc, 0xA, (uint8_t)date.tm_min);
+    am1815_write_register(rtc, 0xB, (uint8_t)date.tm_hour);
+    am1815_write_register(rtc, 0xC, (uint8_t)date.tm_mday);
+    am1815_write_register(rtc, 0xD, (uint8_t)date.tm_mon);
+    am1815_write_register(rtc, 0xE, (uint8_t)date.tm_wday);
 }
 
 static struct uart uart;
