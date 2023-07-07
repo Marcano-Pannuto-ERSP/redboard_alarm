@@ -80,8 +80,22 @@ int main(void){
 
     uart_init(&uart, UART_INST0);
 
+	// Create a timeval struct to set the RTC alarm to
+	struct tm date = {
+		.tm_year = 123,
+		.tm_mon = 7,
+		.tm_mday = 10,
+		.tm_hour = 7,
+		.tm_min = 30,
+		.tm_sec = 45,
+	};
+	time_t time = mktime(&date);
+	struct timeval atime = {.tv_sec = time, .tv_usec = 0};
+	// Write to alarm
+	am1815_write_alarm(&rtc, &atime);
+
+	// Read what alarm says now
     struct timeval toPrint = am1815_read_alarm(&rtc);
-    // struct timeval toPrint = am1815_read_time(&rtc);
 
     while (1) {
 		am_util_stdio_printf("in while loop \r\n");
