@@ -94,41 +94,26 @@ int main(void){
 
 	// Create a timeval struct to set the RTC alarm to
 	struct tm date = {
-		.tm_year = 123,
-		.tm_mon = 7,
-		.tm_mday = 10,
-		.tm_hour = 7,
-		.tm_min = 30,
-		.tm_sec = 45,
+		.tm_year = 0,
+		.tm_mon = 10,
+		.tm_mday = 21,
+		.tm_hour = 1,
+		.tm_min = 13,
+		.tm_sec = 1,
 	};
 	time_t time = mktime(&date);
-	struct timeval atime = {.tv_sec = time, .tv_usec = 0};
+	struct timeval atime = {.tv_sec = time, .tv_usec = 470687};
 	// Write to alarm
 	am1815_write_alarm(&rtc, &atime);
 
 	// Read what alarm says now
     struct timeval toPrint = am1815_read_alarm(&rtc);
 
-	// Debug: write to ram registers
-	am1815_write_register(&rtc, 0x40, 16);
-
     while (1) {
 		am_util_stdio_printf("in while loop \r\n");
 
 		am_util_stdio_printf("seconds: %lld\r\n", toPrint.tv_sec);
-   		am_util_stdio_printf("ms: %lld\r\n", toPrint.tv_usec);
-
-		// debug : read hundredths register
-		uint8_t reg = am1815_read_register(&rtc, 0x1);
-		am_util_stdio_printf("register 1: %d\r\n", reg);
-
-		// read ram register
-		uint8_t reg2 = am1815_read_register(&rtc, 0x40);
-		am_util_stdio_printf("register 40: %d\r\n", reg2);
-
-		// read oscillator status register
-		uint8_t reg3 = am1815_read_register(&rtc, 0x1D);
-		am_util_stdio_printf("register 1D: %d\r\n", reg3);
+   		am_util_stdio_printf("us: %ld\r\n", toPrint.tv_usec);
 
 		am_util_delay_ms(250);
     }
