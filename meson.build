@@ -18,7 +18,7 @@ link_args = [
 
 # Executables -- FIXME this is here more as an example for now...
 sources = files([
-  'src/rtc_alarm.c',
+  'src/main.c',
 ])
 
 # Find libm...
