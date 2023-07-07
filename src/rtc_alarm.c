@@ -58,6 +58,7 @@ void am1815_write_alarm(struct am1815 *rtc, struct timeval *atime)
     gmtime_r(&(atime->tv_sec), &date);
     int hundredths = atime->tv_usec / 10000;
 
+	/*
     am1815_write_register(rtc, 0x8, (uint8_t)hundredths);
     am1815_write_register(rtc, 0x9, (uint8_t)date.tm_sec);
     am1815_write_register(rtc, 0xA, (uint8_t)date.tm_min);
@@ -65,6 +66,15 @@ void am1815_write_alarm(struct am1815 *rtc, struct timeval *atime)
     am1815_write_register(rtc, 0xC, (uint8_t)date.tm_mday);
     am1815_write_register(rtc, 0xD, (uint8_t)date.tm_mon);
     am1815_write_register(rtc, 0xE, (uint8_t)date.tm_wday);
+	*/
+
+	am1815_write_register(rtc, 0x8, (uint8_t)10);
+    am1815_write_register(rtc, 0x9, (uint8_t)10);
+    am1815_write_register(rtc, 0xA, (uint8_t)10);
+    am1815_write_register(rtc, 0xB, (uint8_t)10);
+    am1815_write_register(rtc, 0xC, (uint8_t)10);
+    am1815_write_register(rtc, 0xD, (uint8_t)10);
+    am1815_write_register(rtc, 0xE, (uint8_t)5);
 }
 
 static struct uart uart;
@@ -97,11 +107,27 @@ int main(void){
 	// Read what alarm says now
     struct timeval toPrint = am1815_read_alarm(&rtc);
 
+	// Debug: write to ram registers
+	am1815_write_register(&rtc, 0x40, 16);
+
     while (1) {
 		am_util_stdio_printf("in while loop \r\n");
 
 		am_util_stdio_printf("seconds: %lld\r\n", toPrint.tv_sec);
    		am_util_stdio_printf("ms: %lld\r\n", toPrint.tv_usec);
+
+		// debug : read hundredths register
+		uint8_t reg = am1815_read_register(&rtc, 0x1);
+		am_util_stdio_printf("register 1: %d\r\n", reg);
+
+		// read ram register
+		uint8_t reg2 = am1815_read_register(&rtc, 0x40);
+		am_util_stdio_printf("register 40: %d\r\n", reg2);
+
+		// read oscillator status register
+		uint8_t reg3 = am1815_read_register(&rtc, 0x1D);
+		am_util_stdio_printf("register 1D: %d\r\n", reg3);
+
 		am_util_delay_ms(250);
     }
    
