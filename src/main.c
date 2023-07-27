@@ -22,8 +22,7 @@
 
 #include <uart.h>
 #include <adc.h>
-#include <spi.h>
-#include <lora.h>
+#include <syscalls.h>
 #include <gpio.h>
 
 #define CHECK_ERRORS(x)\
@@ -78,6 +77,7 @@ int main(void)
 	am_hal_interrupt_master_enable();
 
 	// Init UART, registers with SDK printf
+	syscalls_uart_init(&uart);
 	uart_init(&uart, UART_INST0);
 
 	// Wait till an interrupt happens (changed from original file)
