@@ -4,6 +4,8 @@ This is an application using the asimple and forked AmbiqSuiteSDK
 projects to print a message when a GPIO interrupt occurs. This is intended 
 to be used with an Ambiq AM1815 RTC configured to output alarms to its 
 FOUT/nIRQ pin. That pin should be connected to the Redboard's pin 23.
+There also needs to be a pull up resistor connected to FOUT since it is an
+open drain pin. We used a 10k ohm resistor connected to VCC on the RTC.
 
 ## Dependencies
  - https://github.com/gemarcano/AmbiqSuiteSDK
