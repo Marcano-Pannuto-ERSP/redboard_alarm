@@ -1,98 +1,58 @@
-// SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText 2023 Kristin Ebuengan
-// SPDX-FileCopyrightText 2023 Melody Gill
-// SPDX-FileCopyrightText 2023 Gabriel Marcano
-
-/* 
-* This is an edited file of main.c from https://github.com/gemarcano/redboard_lora_example
-* which this repo was forked from
-*
-* Uses GPIO interrupts from the redboard to alert when an alarm set off from the RTC
-*/
-
-#include "am_mcu_apollo.h"
-#include "am_bsp.h"
-#include "am_util.h"
-
+#include <am1815.h>
+#include <time.h>
+#include <sys/time.h>
 #include <string.h>
-#include <assert.h>
-#include <math.h>
-#include <stdio.h>
-#include <inttypes.h>
 
-#include <uart.h>
-#include <adc.h>
-#include <syscalls.h>
-#include <gpio.h>
-
-#define CHECK_ERRORS(x)\
-	if ((x) != AM_HAL_STATUS_SUCCESS)\
-	{\
-		error_handler(x);\
-	}
-
-volatile uint32_t count;
-volatile uint32_t val;
-
-static void error_handler(uint32_t error)
+int am1815_read_timer(struct am1815 *rtc)
 {
-	(void)error;
-	for(;;)
-	{
-		am_devices_led_on(am_bsp_psLEDs, 0);
-		am_util_delay_ms(500);
-		am_devices_led_off(am_bsp_psLEDs, 0);
-		am_util_delay_ms(500);
-	}
+	uint8_t buffer;
+	uint8_t *data = (uint8_t*)buffer;
+	spi_device_cmd_read(rtc->spi, 0x19, buffer, 1);
+	memcpy(data, buffer, 1);
+	
+    return (int)data;
+	// struct tm date = {
+    //     .tm_year = 0,
+	// 	.tm_mon = from_bcd(data[5] & 0x1F) - 1,
+	// 	.tm_mday = from_bcd(data[4] & 0x3F),
+	// 	.tm_hour = from_bcd(data[3] & 0x3F),
+	// 	.tm_min = from_bcd(data[2] & 0x7F),
+	// 	.tm_sec = from_bcd(data[1] & 0x7F),
+	// 	.tm_wday = from_bcd(data[7] & 0x07),
+	// };
+
+	// time_t time = mktime(&date);
+
+	// struct timeval result = {
+	// 	.tv_sec = time,
+	// 	.tv_usec = from_bcd(data[0]) * 10000,
+	// };
+	// return result;
 }
 
-/* added gpio_handler which differs from the original file */
-void gpio_handler(void)
-{
-    am_hal_gpio_state_read(23,  AM_HAL_GPIO_INPUT_READ, &val);
-    count++;
-}
+// void am1815_write_alarm(struct am1815 *rtc, struct timeval *atime)
+// {
+//     // struct tm date;
+//     // gmtime_r(&(atime->tv_sec), &date);
+//     // int hundredths = atime->tv_usec / 10000;
 
-/* 
-* removed anything using LoRa from original file and used the file as a
-* template for GPIO interrupts 
-*/
-static struct uart uart;
-static struct gpio alarm;
+//     // am1815_write_register(rtc, 0x8, to_bcd((uint8_t)hundredths));
+//     // am1815_write_register(rtc, 0x9, to_bcd((uint8_t)date.tm_sec));
+//     // am1815_write_register(rtc, 0xA, to_bcd((uint8_t)date.tm_min));
+//     // am1815_write_register(rtc, 0xB, to_bcd((uint8_t)date.tm_hour));
+//     // am1815_write_register(rtc, 0xC, to_bcd((uint8_t)date.tm_mday));
+//     // am1815_write_register(rtc, 0xD, to_bcd((uint8_t)date.tm_mon));
+//     // am1815_write_register(rtc, 0xE, to_bcd((uint8_t)date.tm_wday));
+// }
 
-int main(void)
-{
-	// Prepare MCU by init-ing clock, cache, and power level operation
-	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX, 0);
-	am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
-	am_hal_cachectrl_enable();
-	am_bsp_low_power_init();
-	am_hal_sysctrl_fpu_enable();
-	am_hal_sysctrl_fpu_stacking_enable(true);
+struct am1815 rtc;
+struct spi_bus spi;
+struct spi_device rtc_spi;
 
-	// Enabling the GPIO interrupt (added from original file)
-	am_hal_gpio_interrupt_register(23, gpio_handler);
-	am_hal_gpio_interrupt_clear(((uint64_t) 0x1) << 23);
-	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
-	am_hal_interrupt_master_enable();
-
-	// Init UART, registers with SDK printf
-	syscalls_uart_init(&uart);
-	uart_init(&uart, UART_INST0);
-
-	// Wait till an interrupt happens (changed from original file)
-	int counter = 0;
-	while (1)
-	{
-		// tells us when the alarm stops
-		am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
-		am_util_delay_ms(10);
-		counter += 10;
-		
-		// code for gpio_handler
-		int currentCount = count;
-		while (currentCount == count) {
-			am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
-		}
-	}
+int main(void){
+	spi_bus_init(&spi, 0);
+	spi_bus_enable(&spi);
+	spi_bus_init_device(&spi, &rtc_spi, SPI_CS_3, 2000000u);
+    am1815_init(&rtc, &rtc_spi);
+    am1815_read_timer(&rtc);
 }
