@@ -27,35 +27,16 @@ uint8_t am1815_read_timer(struct am1815 *rtc)
 	spi_device_cmd_read(rtc->spi, 0x19, data, 1);
 	memcpy(data, buffer, 1);
 
-	// am_util_stdio_printf("Read Timer: %02X\r\n", *data);
     return data;
-
-	// struct tm date = {
-    //     .tm_year = 0,
-	// 	.tm_mon = from_bcd(data[5] & 0x1F) - 1,
-	// 	.tm_mday = from_bcd(data[4] & 0x3F),
-	// 	.tm_hour = from_bcd(data[3] & 0x3F),
-	// 	.tm_min = from_bcd(data[2] & 0x7F),
-	// 	.tm_sec = from_bcd(data[1] & 0x7F),
-	// 	.tm_wday = from_bcd(data[7] & 0x07),
-	// };
-
-	// time_t time = mktime(&date);
-
-	// struct timeval result = {
-	// 	.tv_sec = time,
-	// 	.tv_usec = from_bcd(data[0]) * 10000,
-	// };
-	// return result;
 }
 
 double find_timer(double timer)
 {
     if(timer <= 0.0625){
-        timer = ((int)(timer * 4096))/4096;
+        timer = ((int)(timer * 4096))/4096.0;
 	}
     else if(timer <= 4){
-        timer = ((int)(timer * 64))/64;
+        timer = ((int)(timer * 64))/64.0;
 	}
     else if(timer <= 256){
         timer = (int)timer;
@@ -67,18 +48,27 @@ double find_timer(double timer)
         timer = 15360;
 	}
 
-    if(timer == 0){
-        printf("Timer disabled (set to 0 seconds)");
-	}
-    else{
-        printf("Timer set to: %u", timer);
-	}
+    // if(timer == 0){
+    //     printf("Timer disabled (set to 0 seconds)");
+	// }
+    // else{
+    //     printf("Timer set to: %u", timer);
+	// }
     return timer;
 }
 
-void am1815_write_timer(struct am1815 *rtc, double timer)
+void am1815_write_timer2(struct am1815 *rtc, double timer)
 {
 	double finalTimer = find_timer(timer);
+
+	if(finalTimer == 0){
+        am_util_stdio_printf("Timer disabled (set to 0 seconds)\r\n");
+		return;
+	}
+    else{
+        am_util_stdio_printf("Timer set to: %f\r\n", finalTimer);
+	}
+
 	// TE (enables countdown timer)
     // Sets the Countdown Timer Frequency and
     // the Timer Initial Value
@@ -106,12 +96,6 @@ void am1815_write_timer(struct am1815 *rtc, double timer)
         timerinitial = ((int)(finalTimer * (1/60))) - 1;
 	}
 
-    if(finalTimer == 0){
-        am_util_stdio_printf("Timer disabled (set to 0 seconds)\r\n");
-	}
-    else{
-        am_util_stdio_printf("Timer set to: %f\r\n", finalTimer);
-	}
 	am1815_write_register(rtc, 0x19, timerinitial);
 	am1815_write_register(rtc, 0x1A, timerinitial);
 	am1815_write_register(rtc, 0x18, timerResult);
@@ -119,6 +103,8 @@ void am1815_write_timer(struct am1815 *rtc, double timer)
 	am_util_stdio_printf("18: %02X\r\n", am1815_read_register(rtc, 0x18));
 	am_util_stdio_printf("19: %02X\r\n", am1815_read_register(rtc, 0x19));
 	am_util_stdio_printf("1A: %02X\r\n", am1815_read_register(rtc, 0x1A));
+
+	return;
 }
 
 struct am1815 rtc;
@@ -150,7 +136,7 @@ int main(void){
 	am_util_stdio_printf("Read Register: %02X\r\n", am1815_read_register(&rtc, 0x19));
 	am_util_stdio_printf("RTC ID: %02X\r\n", am1815_read_register(&rtc, 0x28));
 
-	am1815_write_timer(&rtc, 0.5);
+	am1815_write_timer2(&rtc, 0.4);
 
 	am_util_stdio_printf("done!\r\n");
 }
