@@ -1,118 +1,67 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText 2023 Kristin Ebuengan
+// SPDX-FileCopyrightText 2023 Melody Gill
+// SPDX-FileCopyrightText 2023 Gabriel Marcano
+
+/* 
+* This is an edited file of main.c from https://github.com/gemarcano/redboard_lora_example
+* which this repo was forked from
+*
+* Uses GPIO interrupts from the redboard to alert when an alarm set off from the RTC
+*/
+
 #include "am_mcu_apollo.h"
 #include "am_bsp.h"
 #include "am_util.h"
 
-#include <sys/time.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
-#include <time.h>
-#include <stdint.h>
+#include <inttypes.h>
 
 #include <uart.h>
-#include <spi.h>
 #include <adc.h>
-#include <am1815.h>
-#include <bmp280.h>
-#include <flash.h>
-#include <pdm.h>
 #include <syscalls.h>
-#include <asimple_littlefs.h>
+#include <gpio.h>
 
-uint8_t am1815_read_timer(struct am1815 *rtc)
+#define CHECK_ERRORS(x)\
+	if ((x) != AM_HAL_STATUS_SUCCESS)\
+	{\
+		error_handler(x);\
+	}
+
+volatile uint32_t count;
+volatile uint32_t val;
+
+static void error_handler(uint32_t error)
 {
-	uint32_t buffer[1];
-	uint8_t *data = (uint8_t*)buffer;
-	spi_device_cmd_read(rtc->spi, 0x19, data, 1);
-	memcpy(data, buffer, 1);
-
-    return data;
+	(void)error;
+	for(;;)
+	{
+		am_devices_led_on(am_bsp_psLEDs, 0);
+		am_util_delay_ms(500);
+		am_devices_led_off(am_bsp_psLEDs, 0);
+		am_util_delay_ms(500);
+	}
 }
 
-double find_timer(double timer)
+/* added gpio_handler which differs from the original file */
+void gpio_handler(void)
 {
-    if(timer <= 0.0625){
-        timer = ((int)(timer * 4096))/4096.0;
-	}
-    else if(timer <= 4){
-        timer = ((int)(timer * 64))/64.0;
-	}
-    else if(timer <= 256){
-        timer = (int)timer;
-	}
-    else if(timer <= 15360){
-        timer = ((int)(timer/60)) * 60;
-	}
-    else{
-        timer = 15360;
-	}
-
-    // if(timer == 0){
-    //     printf("Timer disabled (set to 0 seconds)");
-	// }
-    // else{
-    //     printf("Timer set to: %u", timer);
-	// }
-    return timer;
+    am_hal_gpio_state_read(23,  AM_HAL_GPIO_INPUT_READ, &val);
+    count++;
 }
 
-void am1815_write_timer2(struct am1815 *rtc, double timer)
-{
-	double finalTimer = find_timer(timer);
-
-	if(finalTimer == 0){
-        am_util_stdio_printf("Timer disabled (set to 0 seconds)\r\n");
-		return;
-	}
-    else{
-        am_util_stdio_printf("Timer set to: %f\r\n", finalTimer);
-	}
-
-	// TE (enables countdown timer)
-    // Sets the Countdown Timer Frequency and
-    // the Timer Initial Value
-	am_util_stdio_printf("RTC ID: %02X\r\n", am1815_read_register(rtc, 0x28));
-    uint8_t countdowntimer = am1815_read_register(rtc, 0x18);
-    // clear TE first
-	am1815_write_register(rtc, 0x18, countdowntimer & ~0b10000000);
-    uint8_t RPT = countdowntimer & 0b00011100;
-    uint8_t timerResult = 0b10100000 + RPT;
-    uint32_t timerinitial = 0;
-    if(finalTimer <= 0.0625){
-        timerResult += 0b00;
-        timerinitial = ((int)(finalTimer * 4096)) - 1;
-	}
-    else if(finalTimer <= 4){
-        timerResult += 0b01;
-        timerinitial = ((int)(finalTimer * 64)) - 1;
-	}
-    else if(finalTimer <= 256){
-        timerResult += 0b10;
-        timerinitial = ((int)timer) - 1;
-	}
-    else{
-        timerResult += 0b11;
-        timerinitial = ((int)(finalTimer * (1/60))) - 1;
-	}
-
-	am1815_write_register(rtc, 0x19, timerinitial);
-	am1815_write_register(rtc, 0x1A, timerinitial);
-	am1815_write_register(rtc, 0x18, timerResult);
-
-	am_util_stdio_printf("18: %02X\r\n", am1815_read_register(rtc, 0x18));
-	am_util_stdio_printf("19: %02X\r\n", am1815_read_register(rtc, 0x19));
-	am_util_stdio_printf("1A: %02X\r\n", am1815_read_register(rtc, 0x1A));
-
-	return;
-}
-
-struct am1815 rtc;
-struct spi_bus spi;
-struct spi_device rtc_spi;
+/* 
+* removed anything using LoRa from original file and used the file as a
+* template for GPIO interrupts 
+*/
 static struct uart uart;
+static struct gpio alarm;
 
-int main(void){
+int main(void)
+{
 	// Prepare MCU by init-ing clock, cache, and power level operation
 	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX, 0);
 	am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
@@ -121,22 +70,29 @@ int main(void){
 	am_hal_sysctrl_fpu_enable();
 	am_hal_sysctrl_fpu_stacking_enable(true);
 
+	// Enabling the GPIO interrupt (added from original file)
+	am_hal_gpio_interrupt_register(23, gpio_handler);
+	am_hal_gpio_interrupt_clear(((uint64_t) 0x1) << 23);
+	gpio_init(&alarm, 23, GPIO_MODE_INPUT, false);
+	am_hal_interrupt_master_enable();
+
 	// Init UART, registers with SDK printf
 	syscalls_uart_init(&uart);
 	uart_init(&uart, UART_INST0);
 
-	am_util_stdio_printf("hello!\r\n");
-
-	spi_bus_init(&spi, 0);
-	spi_bus_enable(&spi);
-	spi_bus_init_device(&spi, &rtc_spi, SPI_CS_3, 2000000u);
-    am1815_init(&rtc, &rtc_spi);
-    am1815_read_timer(&rtc);
-
-	am_util_stdio_printf("Read Register: %02X\r\n", am1815_read_register(&rtc, 0x19));
-	am_util_stdio_printf("RTC ID: %02X\r\n", am1815_read_register(&rtc, 0x28));
-
-	am1815_write_timer2(&rtc, 0.4);
-
-	am_util_stdio_printf("done!\r\n");
+	// Wait till an interrupt happens (changed from original file)
+	int counter = 0;
+	while (1)
+	{
+		// tells us when the alarm stops
+		am_util_stdio_printf("alarm went off %d\r\n\r\n", counter);
+		am_util_delay_ms(10);
+		counter += 10;
+		
+		// code for gpio_handler
+		int currentCount = count;
+		while (currentCount == count) {
+			am_hal_sysctrl_sleep(AM_HAL_SYSCTRL_SLEEP_DEEP);
+		}
+	}
 }
