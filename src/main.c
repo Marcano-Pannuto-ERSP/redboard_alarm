@@ -25,6 +25,9 @@
 #include <syscalls.h>
 #include <gpio.h>
 
+#include <spi.h>
+#include <am1815.h>
+
 #define CHECK_ERRORS(x)\
 	if ((x) != AM_HAL_STATUS_SUCCESS)\
 	{\
@@ -59,9 +62,12 @@ void gpio_handler(void)
 */
 static struct uart uart;
 static struct gpio alarm;
+static struct am1815 rtc;
+static struct spi_bus spi;
+static struct spi_device spi_rtc;
 
 int main(void)
-{
+{	
 	// Prepare MCU by init-ing clock, cache, and power level operation
 	am_hal_clkgen_control(AM_HAL_CLKGEN_CONTROL_SYSCLK_MAX, 0);
 	am_hal_cachectrl_config(&am_hal_cachectrl_defaults);
@@ -79,6 +85,18 @@ int main(void)
 	// Init UART, registers with SDK printf
 	syscalls_uart_init(&uart);
 	uart_init(&uart, UART_INST0);
+
+	am_util_stdio_printf("Hello World!\r\n");
+
+	// Initialize RTC
+	spi_bus_init(&spi, 0);
+	spi_bus_enable(&spi);
+	spi_bus_init_device(&spi, &spi_rtc, SPI_CS_3, 2000000u);
+	am1815_init(&rtc, &spi_rtc);
+
+	// Change how often the alarm repeats
+	bool success = am1815_repeat_alarm(&rtc, 7);
+	am_util_stdio_printf("%d\r\n", success);
 
 	// Wait till an interrupt happens (changed from original file)
 	int counter = 0;
